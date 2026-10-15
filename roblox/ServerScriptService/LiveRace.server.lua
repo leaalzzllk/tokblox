@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 local Workspace = game:GetService("Workspace")
 
-local API_BASE_URL = "https://SEU-DOMINIO-PUBLICO"
+local API_BASE_URL = "https://tokblox.onrender.com"
 local API_KEY = "COLOQUE_A_MESMA_CHAVE_DO_ROBLOX_API_KEY"
 local POLL_SECONDS = 2
 local TRACK_LENGTH = 300
