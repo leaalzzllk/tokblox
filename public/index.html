@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101117">
+    <title>TOKBLOX — painel da live</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="TOKBLOX início">
+          <span class="brand-mark">T</span>
+          <span>TOK<span class="brand-accent">BLOX</span></span>
+        </a>
+        <div class="topbar-right">
+          <span class="safe-label"><span class="safe-dot"></span> PONTOS VIRTUAIS</span>
+          <a class="help-link" href="#como-usar">Como usar</a>
+        </div>
+      </header>
+
+      <nav class="dashboard-tabs" aria-label="Abas do painel">
+        <button class="dashboard-tab is-active" type="button" data-tab="live-panel" aria-selected="true">Painel da live</button>
+        <button class="dashboard-tab" type="button" data-tab="gift-panel" aria-selected="false">🎁 Configurar presentes</button>
+        <button class="dashboard-tab" type="button" data-tab="test-panel" aria-selected="false">Teste Roblox</button>
+      </nav>
+
+      <section class="intro">
+        <div>
+          <div class="eyebrow"><span class="eyebrow-line"></span> CENTRAL DO CRIADOR</div>
+          <h1>Sua live.<br><span>Uma nova corrida.</span></h1>
+          <p class="intro-copy">Conecte o TikTok e acompanhe cada comentário que movimenta a corrida no Roblox.</p>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="speed-line speed-line-one"></div>
+          <div class="speed-line speed-line-two"></div>
+          <div class="speed-line speed-line-three"></div>
+          <div class="hero-car">
+            <div class="car-window"></div>
+            <div class="car-stripe"></div>
+            <span class="wheel wheel-front"></span>
+            <span class="wheel wheel-back"></span>
+          </div>
+          <span class="hero-star">✦</span>
+        </div>
+      </section>
+
+      <section class="connect-card" aria-labelledby="connect-title">
+        <div class="section-heading">
+          <div class="section-icon tiktok-icon" aria-hidden="true">♪</div>
+          <div>
+            <p class="section-kicker">CONEXÃO</p>
+            <h2 id="connect-title">Conectar à live do TikTok</h2>
+          </div>
+          <div id="connection-badge" class="connection-badge" data-state="offline">
+            <span class="status-dot"></span><span id="connection-label">Desconectado</span>
+          </div>
+        </div>
+
+        <form id="connect-form" class="connect-form">
+          <label class="input-wrap">
+            <span class="input-prefix">@</span>
+            <input id="username" name="username" type="text" placeholder="usuario_da_live" autocomplete="off" maxlength="30" required>
+          </label>
+          <button id="connect-button" class="button button-primary" type="submit">
+            <span class="button-symbol">↗</span> Conectar live
+          </button>
+          <button id="disconnect-button" class="button button-secondary" type="button" hidden>Desconectar</button>
+        </form>
+        <div class="secure-note">
+          <span aria-hidden="true">▣</span>
+          <label for="dashboard-key">Chave do painel</label>
+          <input id="dashboard-key" type="password" placeholder="Cole a DASHBOARD_API_KEY do seu .env" autocomplete="off">
+          <span class="key-hint">A chave fica somente nesta aba.</span>
+        </div>
+        <p id="connection-message" class="message" role="status" aria-live="polite">Informe a chave do painel e o usuário da live para começar.</p>
+      </section>
+
+      <section id="gift-panel" class="gift-panel" hidden>
+        <div class="gift-header">
+          <div>
+            <p class="section-kicker">PERSONALIZE A LIVE</p>
+            <h2>Configurar presentes</h2>
+            <p class="gift-description">Associe um presente a um efeito visual no Roblox. Presentes não dão vantagem na corrida nem viram pontos.</p>
+          </div>
+          <div class="gift-header-icon" aria-hidden="true">✦</div>
+        </div>
+        <div class="gift-auto-note"><span>✦</span> Os presentes são detectados automaticamente. Escolha apenas o que acontece no jogo.</div>
+        <p id="gift-message" class="message" role="status" aria-live="polite"></p>
+
+        <div class="gift-columns">
+          <section class="gift-list-section">
+            <div class="gift-list-heading">
+              <div><p class="section-kicker">REGRAS ATIVAS</p><h3>Presentes configurados</h3></div>
+              <span id="gift-config-count" class="gift-count">0 / 100</span>
+            </div>
+            <div id="gift-config-list" class="gift-config-list">
+              <div class="gift-list-empty">Nenhum presente configurado ainda.</div>
+            </div>
+          </section>
+          <section class="gift-list-section detected-section">
+            <div class="gift-list-heading">
+              <div><p class="section-kicker">DA SUA LIVE</p><h3>Presentes detectados</h3></div>
+              <span class="recent-live-indicator"><span></span> ao vivo</span>
+            </div>
+            <div id="recent-gift-list" class="recent-gift-list">
+              <div class="gift-list-empty">Conecte a live para detectar os presentes enviados.</div>
+            </div>
+          </section>
+        </div>
+        <p class="gift-note"><span>ⓘ</span> A lista é preenchida conforme os presentes chegam na live. Escolha um efeito e salve; nome e ID não precisam ser digitados. As regras ficam salvas no gateway.</p>
+      </section>
+
+      <section id="test-panel" class="test-panel" hidden aria-labelledby="test-title">
+        <div class="test-panel-icon" aria-hidden="true">↔</div>
+        <p class="section-kicker">VERIFICAÇÃO DE CONEXÃO</p>
+        <h2 id="test-title">Testar conexão com o Roblox</h2>
+        <p class="test-description">Envia um evento de teste ao script do Roblox Studio e aguarda a confirmação. Não inicia corrida, não cria carros e não altera pontos.</p>
+        <div class="test-requirements">
+          <strong>Antes de testar:</strong>
+          <span>Inicie a experiência no Roblox Studio e deixe o Script TOKBLOX em execução.</span>
+        </div>
+        <button id="test-roblox-button" class="button button-primary" type="button">Enviar teste ao Roblox</button>
+        <p id="test-message" class="message" role="status" aria-live="polite">O resultado aparecerá aqui.</p>
+      </section>
+
+      <section id="live-panel" class="live-layout">
+        <div class="chat-card">
+          <div class="chat-heading">
+            <div class="chat-title">
+              <div class="section-icon chat-icon" aria-hidden="true">☰</div>
+              <div>
+                <p class="section-kicker">AO VIVO</p>
+                <h2>Comentários da live</h2>
+              </div>
+            </div>
+            <div class="viewer-count"><span class="viewer-pulse"></span><span id="comment-count">0</span> comentários</div>
+          </div>
+          <div id="chat-feed" class="chat-feed" role="log" aria-live="polite" aria-label="Comentários da live">
+            <div id="empty-state" class="empty-state">
+              <div class="empty-icon">⌁</div>
+              <strong>Aguardando conexão</strong>
+              <span>Quando a live conectar, os comentários aparecem aqui em tempo real.</span>
+            </div>
+          </div>
+          <div class="chat-footer">
+            <span class="footer-live-dot"></span>
+            <span id="feed-footer">Conecte uma live para começar</span>
+            <span class="auto-refresh"><span class="refresh-icon">↻</span> atualização automática</span>
+          </div>
+        </div>
+
+        <aside class="side-column">
+          <div class="commands-card">
+            <div class="side-title">
+              <div class="section-icon command-icon" aria-hidden="true">⌘</div>
+              <div>
+                <p class="section-kicker">INTERAÇÃO</p>
+                <h2>Comandos do chat</h2>
+              </div>
+            </div>
+            <div class="command-list">
+              <div class="command-item"><code><i>NomeRoblox</i></code><span>Entra na fila</span></div>
+              <div class="command-item"><code>!entrar <i>Nome</i></code><span>Também funciona</span></div>
+              <div class="command-item"><code>!corrida</code><span>Rodada manual</span></div>
+              <div class="command-item"><code>!apostar <i>Nome</i> <i>100</i></code><span>Usa pontos virtuais</span></div>
+              <div class="command-item"><code>!pontos</code><span>Consulta o saldo</span></div>
+            </div>
+            <div class="virtual-note"><span>↻</span> Primeiro nick inicia a contagem de 30s. Novos nicks podem entrar na corrida ativa.</div>
+            <div class="virtual-note"><span>✦</span> Presentes acionam apenas efeitos visuais.</div>
+          </div>
+
+          <div class="how-card" id="como-usar">
+            <p class="section-kicker">COMECE EM 3 PASSOS</p>
+            <div class="step"><span>01</span><p>Inicie o gateway TOKBLOX no seu computador ou servidor.</p></div>
+            <div class="step"><span>02</span><p>Use a chave do painel configurada no arquivo <code>.env</code>.</p></div>
+            <div class="step"><span>03</span><p>Digite o usuário da live e clique em conectar.</p></div>
+          </div>
+        </aside>
+      </section>
+      <footer class="page-footer"><span>TOKBLOX</span> • Painel de corrida interativa <span class="footer-separator">/</span> Comentários são fornecidos pelo conector comunitário do TikTok.</footer>
+    </main>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

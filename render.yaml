@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: tokblox
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 24.11.1
+      - key: ROBLOX_API_KEY
+        generateValue: true
+      - key: DASHBOARD_API_KEY
+        generateValue: true
