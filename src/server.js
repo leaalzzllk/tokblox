@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { GameState, parseCommand } from "./game-state.js";
+import { normalizeTikTokChatMessage } from "./tiktok-chat.js";
 import { TikTokLiveConnection, WebcastEvent } from "tiktok-live-connector";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -164,12 +165,12 @@ function cancelAutomaticRace() {
 }
 
 async function handleComment(data) {
-  const comment = String(data.comment ?? "");
-  const user = data.user ?? {};
+  const normalized = normalizeTikTokChatMessage(data);
+  const { comment, username, nickname, userId } = normalized;
   const commentEvent = {
     id: nextCommentId++,
-    username: String(user.uniqueId ?? "desconhecido"),
-    nickname: String(user.nickname ?? user.uniqueId ?? "Desconhecido"),
+    username,
+    nickname,
     comment,
     timestamp: new Date().toISOString(),
     command: parseCommand(comment)?.type ?? null,
@@ -180,8 +181,8 @@ async function handleComment(data) {
   const command = parseCommand(comment);
   if (!command) return;
 
-  const viewerId = String(user.userId ?? user.uniqueId ?? "");
-  const viewerName = String(user.uniqueId ?? "viewer");
+  const viewerId = userId;
+  const viewerName = username === "desconhecido" ? "viewer" : username;
   if (!viewerId) {
     console.warn("Comentário de comando ignorado: TikTok não forneceu um ID de usuário.");
     return;
