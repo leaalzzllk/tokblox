@@ -23,26 +23,6 @@ test("starts a solo race automatically and lets viewers join while it is running
     message: "PlayerOne foi adicionado à fila da próxima corrida.",
   });
 
-  test("keeps the exact TikTok comment with its Roblox join event", () => {
-    const game = new GameState();
-    const player = { id: "42", name: "PlayerOne" };
-    const source = {
-      commentId: 17,
-      tiktokMessageId: "chat-message-1",
-      tiktokUsername: "viewer_one",
-      text: "!entrar PlayerOne",
-    };
-
-    assert.equal(game.joinRobloxPlayer(player, source).queued, true);
-    assert.deepEqual(game.getEventsAfter(0)[0], {
-      id: 1,
-      type: "player_joined",
-      player: { ...player, source },
-    });
-    assert.deepEqual(game.startAutomaticRace().ok, true);
-    assert.deepEqual(game.getEventsAfter(1)[0].racers[0].source, source);
-  });
-
   const started = game.startAutomaticRace();
   assert.equal(started.ok, true);
   assert.equal(started.raceId, 1);
@@ -58,6 +38,80 @@ test("starts a solo race automatically and lets viewers join while it is running
     "racer_joined",
   ]);
   assert.equal(game.finishRace(1, "2").ok, true);
+});
+
+test("queues the same TikTok viewer's repeated racer for the next race", () => {
+  const game = new GameState();
+  const player = { id: "42", name: "PlayerOne" };
+  const firstSource = { tiktokUserId: "viewer-1", tiktokUsername: "viewer_one" };
+  const repeatedSource = { ...firstSource, text: "!entrar PlayerOne" };
+
+  assert.equal(game.joinRobloxPlayer(player, firstSource).queued, true);
+  assert.equal(game.startAutomaticRace().ok, true);
+  const repeatedJoin = game.joinRobloxPlayer(player, repeatedSource);
+  assert.equal(repeatedJoin.ok, true);
+  assert.equal(repeatedJoin.queued, true);
+  assert.equal(repeatedJoin.message, "PlayerOne foi colocado na fila da próxima corrida.");
+
+  const duplicateRepeat = game.joinRobloxPlayer(player, repeatedSource);
+  assert.equal(duplicateRepeat.ok, true);
+  assert.equal(duplicateRepeat.message, "PlayerOne já está na fila da próxima corrida.");
+  assert.equal(game.finishRace(1, player.id).ok, true);
+  assert.equal(game.startAutomaticRace().ok, true);
+  assert.equal(game.getEventsAfter(0).filter((event) => event.type === "race_started")[1].racers[0].id, player.id);
+});
+
+test("does not queue an active racer repeated by a different TikTok viewer", () => {
+  const game = new GameState();
+  const player = { id: "42", name: "PlayerOne" };
+
+  game.joinRobloxPlayer(player, { tiktokUserId: "viewer-1" });
+  game.startAutomaticRace();
+  const result = game.joinRobloxPlayer(player, { tiktokUserId: "viewer-2" });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.queued, undefined);
+  assert.equal(game.getEventsAfter(0).filter((event) => event.type === "player_joined").length, 1);
+});
+
+test("keeps the exact TikTok comment with its Roblox join event", () => {
+  const game = new GameState();
+  const player = { id: "42", name: "PlayerOne" };
+  const source = {
+    commentId: 17,
+    tiktokMessageId: "chat-message-1",
+    tiktokUserId: "viewer-1",
+    tiktokUsername: "viewer_one",
+    text: "!entrar PlayerOne",
+  };
+
+  assert.equal(game.joinRobloxPlayer(player, source).queued, true);
+  assert.deepEqual(game.getEventsAfter(0)[0], {
+    id: 1,
+    type: "player_joined",
+    player: { ...player, source },
+  });
+  assert.deepEqual(game.startAutomaticRace().ok, true);
+  assert.deepEqual(game.getEventsAfter(1)[0].racers[0].source, source);
+});
+
+test("publishes like boosts only for matching TikTok racers during a race", () => {
+  const game = new GameState();
+  const player = { id: "42", name: "PlayerOne" };
+  const source = { tiktokUsername: "viewer_one" };
+  game.joinRobloxPlayer(player, source);
+
+  assert.equal(game.publishLikeBoost("viewer_one", 3), 0);
+  assert.equal(game.startAutomaticRace().ok, true);
+  assert.equal(game.publishLikeBoost("@VIEWER_ONE", 3), 1);
+  assert.equal(game.publishLikeBoost("other_viewer", 5), 0);
+  assert.equal(game.publishLikeBoost("viewer_one", 0), 0);
+  assert.deepEqual(game.getEventsAfter(2), [{
+    id: 3,
+    type: "like_boost",
+    playerId: "42",
+    count: 3,
+  }]);
 });
 
 test("opens a betting round before racing and emits ordered events", () => {

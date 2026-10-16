@@ -9,6 +9,8 @@ local POLL_SECONDS = 2
 local TRACK_LENGTH = 300
 local RACE_JOIN_WINDOW_SECONDS = 30
 local MAX_RACERS = 8
+local LIKE_BOOST_PER_LIKE = 0.01
+local MAX_LIKE_SPEED_MULTIPLIER = 2
 
 local carsFolder = Instance.new("Folder")
 carsFolder.Name = "LiveRaceCars"
@@ -155,12 +157,16 @@ local function addRacerToRace(race, player)
 	local lane = laneById[player.id]
 	local start = CFrame.new((lane - (MAX_RACERS - 1) / 2) * laneSpacing, 2, 0)
 	car:PivotTo(start)
+	local baseSpeed = math.random(70, 110)
 	table.insert(race.racers, {
 		player = player,
 		car = car,
 		start = start,
-		speed = math.random(70, 110),
-		startedAt = os.clock(),
+		baseSpeed = baseSpeed,
+		speed = baseSpeed,
+		likes = 0,
+		distance = 0,
+		finishedAt = nil,
 	})
 end
 
@@ -184,23 +190,32 @@ local function runRace(event)
 	end
 
 	local joinWindowEndsAt = os.clock() + RACE_JOIN_WINDOW_SECONDS
+	local lastUpdateAt = os.clock()
 	local winner
 	repeat
 		local now = os.clock()
+		local deltaTime = math.max(0, now - lastUpdateAt)
+		lastUpdateAt = now
 		local allRacersFinished = true
 		local winningFinishTime = math.huge
 
 		for _, racer in ipairs(activeRace.racers) do
-			local elapsed = math.max(0, now - racer.startedAt)
-			local finishTime = racer.startedAt + TRACK_LENGTH / racer.speed
-			local distance = math.min(racer.speed * elapsed, TRACK_LENGTH)
-			racer.car:PivotTo(racer.start * CFrame.new(0, 0, -distance))
-			if now < finishTime then
+			if not racer.finishedAt then
+				local timeToFinish = (TRACK_LENGTH - racer.distance) / racer.speed
+				if deltaTime >= timeToFinish then
+					racer.distance = TRACK_LENGTH
+					racer.finishedAt = now - (deltaTime - timeToFinish)
+				else
+					racer.distance += racer.speed * deltaTime
+				end
+			end
+			racer.car:PivotTo(racer.start * CFrame.new(0, 0, -racer.distance))
+			if not racer.finishedAt then
 				allRacersFinished = false
 			end
-			if finishTime < winningFinishTime then
+			if racer.finishedAt and racer.finishedAt < winningFinishTime then
 				winner = racer.player
-				winningFinishTime = finishTime
+				winningFinishTime = racer.finishedAt
 			end
 		end
 
@@ -268,6 +283,28 @@ local function showGiftEffect(event)
 	print(string.format("Presente %s de %s acionou %s.", event.giftName, event.sender, event.effect))
 end
 
+local function applyLikeBoost(event)
+	if not activeRace or type(event.playerId) ~= "string" or type(event.count) ~= "number" or event.count < 1 then
+		return
+	end
+
+	for _, racer in ipairs(activeRace.racers) do
+		if racer.player.id == event.playerId and not racer.finishedAt then
+			racer.likes = math.min(racer.likes + math.floor(event.count), 100)
+			local multiplier = math.min(1 + racer.likes * LIKE_BOOST_PER_LIKE, MAX_LIKE_SPEED_MULTIPLIER)
+			racer.speed = racer.baseSpeed * multiplier
+			print(string.format(
+				"%s recebeu %d curtida(s): velocidade agora %.1f (+%d%%).",
+				racer.player.name,
+				math.floor(event.count),
+				racer.speed,
+				math.floor((multiplier - 1) * 100)
+			))
+			return
+		end
+	end
+end
+
 local function handleEvent(event)
 	if event.type == "player_joined" then
 		local source = event.player.source
@@ -309,6 +346,8 @@ local function handleEvent(event)
 		nextLane = 0
 	elseif event.type == "gift_effect" then
 		showGiftEffect(event)
+	elseif event.type == "like_boost" then
+		applyLikeBoost(event)
 	elseif event.type == "connection_test" then
 		local ok, err = pcall(function()
 			request("/roblox/test-ack", "POST", { testId = event.testId })

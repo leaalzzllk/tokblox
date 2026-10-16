@@ -20,7 +20,21 @@ export class GameState {
   joinRobloxPlayer(user, source = null) {
     const player = source ? { ...user, source } : user;
     if (this.#race?.status === "running") {
-      if (this.#race.racers.some((racer) => racer.id === player.id)) {
+      const activeRacer = this.#race.racers.find((racer) => racer.id === player.id);
+      if (activeRacer) {
+        const tiktokUserId = source?.tiktokUserId;
+        if (tiktokUserId && activeRacer.source?.tiktokUserId === tiktokUserId) {
+          if (this.#entrants.has(player.id)) {
+            return { ok: true, queued: true, message: `${player.name} já está na fila da próxima corrida.` };
+          }
+          if (this.#entrants.size >= MAX_RACERS) {
+            return { ok: false, message: "A fila está cheia (máximo de 8 corredores)." };
+          }
+
+          this.#entrants.set(player.id, player);
+          this.#publish({ type: "player_joined", player });
+          return { ok: true, queued: true, message: `${player.name} foi colocado na fila da próxima corrida.` };
+        }
         return { ok: false, message: `${player.name} já está participando da corrida.` };
       }
       if (this.#race.racers.length >= MAX_RACE_ENTRANTS) {
@@ -170,6 +184,20 @@ export class GameState {
 
   publishGiftEffect(gift) {
     this.#publish({ type: "gift_effect", ...gift });
+  }
+
+  publishLikeBoost(tiktokUsername, count) {
+    const username = String(tiktokUsername ?? "").trim().replace(/^@/, "").toLowerCase();
+    if (!username || !Number.isSafeInteger(count) || count < 1 || this.#race?.status !== "running") {
+      return 0;
+    }
+
+    const racers = this.#race.racers.filter((racer) =>
+      String(racer.source?.tiktokUsername ?? "").trim().replace(/^@/, "").toLowerCase() === username);
+    for (const racer of racers) {
+      this.#publish({ type: "like_boost", playerId: racer.id, count });
+    }
+    return racers.length;
   }
 
   publishConnectionTest(testId) {

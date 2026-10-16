@@ -231,6 +231,7 @@ async function handleComment(data) {
           const source = {
             commentId: commentEvent.id,
             tiktokMessageId: messageId,
+            tiktokUserId: userId,
             tiktokUsername: username,
             text: comment,
           };
@@ -283,6 +284,21 @@ function handleGift(data) {
   console.info(`Presente "${giftName}" (ID ${giftId}) recebido de @${data.user?.uniqueId ?? "desconhecido"}${configured ? `; efeito ${configured.effect}` : ""}.`);
 }
 
+function handleLike(data) {
+  const username = String(data.user?.displayId ?? data.user?.uniqueId ?? "").trim().replace(/^@/, "");
+  const rawCount = Number(data.likeCount);
+  if (!/^[A-Za-z0-9._]{2,30}$/.test(username) || !Number.isSafeInteger(rawCount) || rawCount < 1) {
+    console.warn("Curtida ignorada: o TikTok não forneceu usuário ou quantidade válidos.");
+    return;
+  }
+
+  const count = Math.min(rawCount, 100);
+  const boostedRacers = state.publishLikeBoost(username, count);
+  if (boostedRacers > 0) {
+    console.info(`@${username} enviou ${count} curtida(s); impulso aplicado a ${boostedRacers} carro(s).`);
+  }
+}
+
 function connectToLive(username) {
   const cleanUsername = username.trim().replace(/^@/, "");
   if (!/^[A-Za-z0-9._]{2,30}$/.test(cleanUsername)) {
@@ -316,6 +332,13 @@ function connectToLive(username) {
           handleGift(data);
         } catch (error) {
           console.error("Falha ao processar presente da live:", error);
+        }
+      });
+      connection.on(WebcastEvent.LIKE, (data) => {
+        try {
+          handleLike(data);
+        } catch (error) {
+          console.error("Falha ao processar curtida da live:", error);
         }
       });
       connection.on("disconnected", () => {

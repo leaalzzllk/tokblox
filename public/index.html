@@ -86,8 +86,28 @@
           </div>
           <div class="gift-header-icon" aria-hidden="true">✦</div>
         </div>
-        <div class="gift-auto-note"><span>✦</span> Os presentes são detectados automaticamente. Escolha apenas o que acontece no jogo.</div>
+        <div class="gift-auto-note"><span>✦</span> Configure presentes manualmente ou escolha um presente detectado automaticamente na live.</div>
         <p id="gift-message" class="message" role="status" aria-live="polite"></p>
+
+        <form id="manual-gift-form" class="manual-gift-form">
+          <label>
+            <span>ID do presente</span>
+            <input id="manual-gift-id" name="giftId" type="text" inputmode="numeric" pattern="[0-9]{1,20}" maxlength="20" placeholder="Ex.: 5655" required>
+          </label>
+          <label>
+            <span>Nome do presente</span>
+            <input id="manual-gift-name" name="giftName" type="text" maxlength="80" placeholder="Ex.: Rosa" required>
+          </label>
+          <label>
+            <span>Efeito no Roblox</span>
+            <select id="manual-gift-effect" name="effect" class="gift-effect-select">
+              <option value="confetti">Chuva de confete</option>
+              <option value="neon">Brilho neon</option>
+              <option value="celebration">Celebração</option>
+            </select>
+          </label>
+          <button id="manual-gift-submit" class="button button-primary" type="submit">Adicionar presente</button>
+        </form>
 
         <div class="gift-columns">
           <section class="gift-list-section">

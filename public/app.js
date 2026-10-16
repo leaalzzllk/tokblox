@@ -13,6 +13,8 @@ const feedFooter = document.querySelector("#feed-footer");
 const giftMessage = document.querySelector("#gift-message");
 const giftConfigList = document.querySelector("#gift-config-list");
 const recentGiftList = document.querySelector("#recent-gift-list");
+const manualGiftForm = document.querySelector("#manual-gift-form");
+const manualGiftSubmit = document.querySelector("#manual-gift-submit");
 const testButton = document.querySelector("#test-roblox-button");
 const testMessage = document.querySelector("#test-message");
 let cursor = 0;
@@ -433,6 +435,26 @@ async function handleGiftAction(event) {
 
 giftConfigList.addEventListener("click", handleGiftAction);
 recentGiftList.addEventListener("click", handleGiftAction);
+
+manualGiftForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(manualGiftForm);
+  const giftId = String(formData.get("giftId")).trim();
+  const giftName = String(formData.get("giftName")).trim();
+  const effect = String(formData.get("effect"));
+  manualGiftSubmit.disabled = true;
+  try {
+    await saveGiftConfiguration(giftId, giftName, effect);
+    manualGiftForm.reset();
+    giftMessage.textContent = `Presente "${giftName}" configurado.`;
+    giftMessage.dataset.kind = "success";
+  } catch (error) {
+    giftMessage.textContent = error.message;
+    giftMessage.dataset.kind = "error";
+  } finally {
+    manualGiftSubmit.disabled = false;
+  }
+});
 
 keyInput.addEventListener("input", () => {
   cursor = 0;

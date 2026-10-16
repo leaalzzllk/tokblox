@@ -38,13 +38,15 @@ O conector TikTok utilizado é uma biblioteca comunitária não oficial, baseada
 
 ## Entrada automática na corrida
 
-Espectadores podem comentar apenas o nick Roblox, por exemplo `Player_123`, ou usar `!entrar Player_123`. O gateway valida o nome na API do Roblox. O painel mostra o resultado da validação e informa se o jogador está na fila da próxima corrida ou foi adicionado a uma corrida em andamento; o evento enviado ao Roblox inclui o ID e o texto exato do comentário, além do usuário TikTok que o enviou. Quando o primeiro participante entra na fila, inicia uma contagem de 30 segundos; no fim dela a corrida começa automaticamente, mesmo com um único corredor. Se alguém enviar um nick enquanto a corrida está acontecendo, o carro entra na corrida ativa e começa a correr também. Cada corrida aceita até 8 participantes. O jogo mantém a inscrição aberta por 30 segundos após a largada e só encerra depois que os carros inscritos cruzarem a chegada. Comentários de uma única palavra que tenham formato de nome Roblox também são verificados como possíveis nicks.
+Espectadores podem comentar apenas o nick Roblox, por exemplo `Player_123`, ou usar `!entrar Player_123`. O gateway valida o nome na API do Roblox. O painel mostra o resultado da validação e informa se o jogador está na fila da próxima corrida ou foi adicionado a uma corrida em andamento; o evento enviado ao Roblox inclui o ID e o texto exato do comentário, além do usuário TikTok que o enviou. Quando o primeiro participante entra na fila, inicia uma contagem de 30 segundos; no fim dela a corrida começa automaticamente, mesmo com um único corredor. Se alguém enviar um nick enquanto a corrida está acontecendo, o carro entra na corrida ativa e começa a correr também. Se a mesma conta TikTok enviar novamente o nick do carro que já está correndo, esse carro também fica inscrito na fila da próxima corrida; envios repetidos não criam inscrições duplicadas. Cada corrida aceita até 8 participantes. O jogo mantém a inscrição aberta por 30 segundos após a largada e só encerra depois que os carros inscritos cruzarem a chegada. Comentários de uma única palavra que tenham formato de nome Roblox também são verificados como possíveis nicks.
+
+Durante a corrida, as curtidas de uma pessoa impulsionam o carro associado à conta TikTok que entrou com aquele corredor: cada curtida aumenta a velocidade em 1%, até o limite de 2x a velocidade inicial. O conector pode não receber todos os eventos de curtida em lives com muitos espectadores, conforme a própria biblioteca informa.
 
 `!corrida` continua disponível para abrir manualmente uma rodada de apostas virtuais com a fila atual.
 
 ## Configurar presentes da live
 
-No painel, abra a aba **Presentes** e conecte-se à live. Os presentes enviados são descobertos automaticamente e aparecem em **Presentes detectados** com nome e ID preenchidos pelo TikTok. Em cada presente, escolha o que acontece no jogo e clique em **Adicionar** ou **Salvar**:
+No painel, abra a aba **Presentes**. Você pode configurar sem conectar a live preenchendo manualmente o ID e o nome do presente e escolhendo o efeito. O ID deve ser o ID numérico do presente no TikTok. Também é possível conectar à live: presentes enviados aparecem em **Presentes detectados** com nome e ID preenchidos pelo TikTok, e você pode escolher o efeito e clicar em **Adicionar** ou **Salvar**:
 
 - **Chuva de confete**: partículas visuais ao redor dos carros.
 - **Brilho neon nos carros**: realce temporário nos carros.
@@ -77,7 +79,7 @@ O servidor Roblox precisa acessar o gateway por uma URL pública HTTPS. `localho
 4. Substitua `API_BASE_URL` pela URL HTTPS pública do gateway (sem `/` no final) e `API_KEY` pela mesma chave configurada no gateway.
 5. Publique e execute a experiência em um servidor de teste.
 
-O script cria uma pista simples e carros estilizados com o nome Roblox acima deles. As velocidades são sorteadas no servidor Roblox e o primeiro carro a cruzar a linha de chegada vence. As apostas são liquidadas pelo gateway quando ele recebe o resultado.
+O script cria uma pista simples e carros estilizados com o nome Roblox acima deles. As velocidades iniciais são sorteadas no servidor Roblox; curtidas recebidas durante a corrida aumentam a velocidade do carro associado, até 2x. O primeiro carro a cruzar a linha de chegada vence. As apostas são liquidadas pelo gateway quando ele recebe o resultado.
 
 ## 5. Testes
 
