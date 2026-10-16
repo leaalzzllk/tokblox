@@ -7,5 +7,6 @@ export function normalizeTikTokChatMessage(data) {
     nickname: String(user.nickname ?? user.uniqueId ?? username),
     comment: String(data.content ?? data.comment ?? ""),
     userId: String(user.id ?? user.userId ?? user.uniqueId ?? ""),
+    messageId: String(data.common?.msgId ?? ""),
   };
 }

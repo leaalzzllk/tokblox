@@ -155,6 +155,7 @@ h2 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -.2px; }
 .comment-time { margin-left: auto; color: #666873; font-family: Consolas, "Courier New", monospace; font-size: 8px; white-space: nowrap; }
 .comment-text { margin: 0; color: #c1c1c9; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
 .comment-tag { display: inline-flex; margin: 5px 5px 0 0; padding: 3px 6px; border: 1px solid rgba(197,243,107,.16); border-radius: 5px; color: #c5e791; background: rgba(197,243,107,.06); font-family: Consolas, "Courier New", monospace; font-size: 8px; }
+.comment-result { margin: 5px 0 0; color: #9ca0aa; font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
 .chat-footer { min-height: 37px; padding: 0 16px; display: flex; align-items: center; gap: 7px; border-top: 1px solid #292a33; color: #777984; font-size: 9px; }
 .footer-live-dot { width: 6px; height: 6px; background: #6c6d78; box-shadow: none; }
 .chat-footer[data-connected="true"] .footer-live-dot { background: #69ce9b; box-shadow: 0 0 7px rgba(105,206,155,.6); }

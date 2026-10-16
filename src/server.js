@@ -34,10 +34,12 @@ if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
 const state = new GameState();
 const connectionTests = new Map();
 const comments = [];
+const commentUpdates = [];
 const recentGifts = [];
 let giftConfig = await loadGiftConfig();
 let giftConfigWrites = Promise.resolve();
 let nextCommentId = 1;
+let nextCommentUpdateId = 1;
 let liveConnection = null;
 let liveStatus = {
   connected: false,
@@ -164,63 +166,84 @@ function cancelAutomaticRace() {
   autoRaceTimer = null;
 }
 
+function setCommentResult(comment, result) {
+  comment.commandResult = result;
+  commentUpdates.push({
+    id: nextCommentUpdateId++,
+    commentId: comment.id,
+    commandResult: result,
+  });
+  if (commentUpdates.length > MAX_COMMENTS) commentUpdates.shift();
+}
+
 async function handleComment(data) {
   const normalized = normalizeTikTokChatMessage(data);
-  const { comment, username, nickname, userId } = normalized;
+  const { comment, username, nickname, userId, messageId } = normalized;
+  const command = parseCommand(comment);
   const commentEvent = {
     id: nextCommentId++,
     username,
     nickname,
     comment,
     timestamp: new Date().toISOString(),
-    command: parseCommand(comment)?.type ?? null,
+    command: command?.type ?? null,
   };
+  if (command?.type === "join") {
+    commentEvent.commandResult = "Verificando o usuário Roblox...";
+  }
   comments.push(commentEvent);
   if (comments.length > MAX_COMMENTS) comments.shift();
 
-  const command = parseCommand(comment);
-  if (!command) return;
-
   const viewerId = userId;
   const viewerName = username === "desconhecido" ? "viewer" : username;
-  if (!viewerId) {
-    console.warn("Comentário de comando ignorado: TikTok não forneceu um ID de usuário.");
-    return;
-  }
 
-  if (command.type === "balance") {
-    console.info(`@${viewerName}: saldo de ${state.getBalance(viewerId)} pontos virtuais.`);
-    return;
-  }
-  if (command.type === "bet") {
-    const result = state.placeBet(viewerId, viewerName, command.username, command.amount);
-    console.info(`@${viewerName}: ${result.message}`);
-    return;
-  }
-  if (command.type === "start") {
-    const result = state.startRace();
-    console.info(`@${viewerName}: ${result.message}`);
-    if (result.ok) {
-      cancelAutomaticRace();
-      setTimeout(() => {
-        const launch = state.launchRace(result.raceId);
-        console.info(launch.message);
-      }, BETTING_WINDOW_MS);
+  if (command) {
+    if (!viewerId) {
+      setCommentResult(commentEvent, "Comando ignorado: o TikTok não forneceu um ID de usuário.");
+      console.warn(`Comentário ${commentEvent.id} ignorado: TikTok não forneceu um ID de usuário.`);
+    } else if (command.type === "invalid") {
+      setCommentResult(commentEvent, command.message);
+    } else if (command.type === "balance") {
+      const result = `Saldo: ${state.getBalance(viewerId)} pontos virtuais.`;
+      setCommentResult(commentEvent, result);
+      console.info(`@${viewerName}: ${result}`);
+    } else if (command.type === "bet") {
+      const result = state.placeBet(viewerId, viewerName, command.username, command.amount);
+      setCommentResult(commentEvent, result.message);
+      console.info(`@${viewerName}: ${result.message}`);
+    } else if (command.type === "start") {
+      const result = state.startRace();
+      setCommentResult(commentEvent, result.message);
+      console.info(`@${viewerName}: ${result.message}`);
+      if (result.ok) {
+        cancelAutomaticRace();
+        setTimeout(() => {
+          const launch = state.launchRace(result.raceId);
+          console.info(launch.message);
+        }, BETTING_WINDOW_MS);
+      }
+    } else if (command.type === "join") {
+      try {
+        const player = await resolveRobloxUser(command.username);
+        if (!player) {
+          setCommentResult(commentEvent, `Usuário Roblox "${command.username}" não encontrado.`);
+        } else {
+          const source = {
+            commentId: commentEvent.id,
+            tiktokMessageId: messageId,
+            tiktokUsername: username,
+            text: comment,
+          };
+          const result = state.joinRobloxPlayer(player, source);
+          setCommentResult(commentEvent, result.message);
+          console.info(`@${viewerName}: comentário #${commentEvent.id}: ${result.message}`);
+          if (result.queued) scheduleAutomaticRace();
+        }
+      } catch (error) {
+        setCommentResult(commentEvent, error.message);
+        console.error(`Não foi possível validar o usuário Roblox "${command.username}" no comentário #${commentEvent.id}:`, error);
+      }
     }
-    return;
-  }
-
-  try {
-    const user = await resolveRobloxUser(command.username);
-    if (!user) {
-      console.info(`@${viewerName}: o usuário Roblox "${command.username}" não foi encontrado.`);
-      return;
-    }
-    const result = state.joinRobloxPlayer(user);
-    console.info(`@${viewerName}: ${result.message}`);
-    if (result.queued) scheduleAutomaticRace();
-  } catch (error) {
-    console.error(`Não foi possível validar o usuário Roblox "${command.username}":`, error);
   }
 }
 
@@ -281,7 +304,7 @@ function connectToLive(username) {
       }
       if (generation !== liveGeneration) return;
 
-      const connection = new TikTokLiveConnection(cleanUsername, {});
+      const connection = new TikTokLiveConnection(cleanUsername, { processInitialData: false });
       liveConnection = connection;
       connection.on(WebcastEvent.CHAT, (data) => {
         handleComment(data).catch((error) => {
@@ -427,11 +450,18 @@ const server = createServer(async (request, response) => {
     }
     if (request.method === "GET" && url.pathname === "/api/comments") {
       const after = Number(url.searchParams.get("after") ?? "0");
-      if (!Number.isSafeInteger(after) || after < 0) {
+      const updatesAfter = Number(url.searchParams.get("updatesAfter") ?? "0");
+      if (!Number.isSafeInteger(after) || after < 0
+        || !Number.isSafeInteger(updatesAfter) || updatesAfter < 0) {
         sendJson(response, 400, { error: "Cursor inválido." });
         return;
       }
-      sendJson(response, 200, { comments: comments.filter((comment) => comment.id > after).slice(-100) });
+      const updates = commentUpdates.filter((update) => update.id > updatesAfter).slice(0, 100);
+      sendJson(response, 200, {
+        comments: comments.filter((comment) => comment.id > after).slice(-100),
+        updates,
+        updateCursor: updates.at(-1)?.id ?? updatesAfter,
+      });
       return;
     }
     if (request.method === "POST" && url.pathname === "/api/connect") {

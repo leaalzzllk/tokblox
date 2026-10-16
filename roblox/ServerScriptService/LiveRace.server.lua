@@ -141,6 +141,16 @@ local function addRacerToRace(race, player)
 	if not car then
 		return
 	end
+	if player.source then
+		print(string.format(
+			"Roblox adicionou %s à corrida pelo comentário #%s de @%s: %q (TikTok msg %s).",
+			player.name,
+			tostring(player.source.commentId),
+			player.source.tiktokUsername,
+			player.source.text,
+			player.source.tiktokMessageId ~= "" and player.source.tiktokMessageId or "sem ID"
+		))
+	end
 
 	local lane = laneById[player.id]
 	local start = CFrame.new((lane - (MAX_RACERS - 1) / 2) * laneSpacing, 2, 0)
@@ -260,7 +270,19 @@ end
 
 local function handleEvent(event)
 	if event.type == "player_joined" then
-		spawnCar(event.player)
+		local source = event.player.source
+		if source then
+			print(string.format(
+				"%s está na fila; ainda não está na corrida. Origem: comentário #%s de @%s: %q (TikTok msg %s).",
+				event.player.name,
+				tostring(source.commentId),
+				source.tiktokUsername,
+				source.text,
+				source.tiktokMessageId ~= "" and source.tiktokMessageId or "sem ID"
+			))
+		else
+			print(event.player.name .. " está na fila para a próxima corrida.")
+		end
 	elseif event.type == "betting_open" then
 		print(string.format("Apostas abertas para a corrida %d.", event.raceId))
 	elseif event.type == "race_started" then

@@ -17,31 +17,32 @@ export class GameState {
     return this.#balances.get(viewerId) ?? STARTING_POINTS;
   }
 
-  joinRobloxPlayer(user) {
+  joinRobloxPlayer(user, source = null) {
+    const player = source ? { ...user, source } : user;
     if (this.#race?.status === "running") {
-      if (this.#race.racers.some((racer) => racer.id === user.id)) {
-        return { ok: false, message: `${user.name} já está participando da corrida.` };
+      if (this.#race.racers.some((racer) => racer.id === player.id)) {
+        return { ok: false, message: `${player.name} já está participando da corrida.` };
       }
       if (this.#race.racers.length >= MAX_RACE_ENTRANTS) {
         return { ok: false, message: "A corrida atual já atingiu o limite de 8 participantes." };
       }
-      this.#race.racers.push(user);
-      this.#publish({ type: "racer_joined", raceId: this.#race.id, player: user });
-      return { ok: true, queued: false, message: `${user.name} entrou na corrida em andamento.` };
+      this.#race.racers.push(player);
+      this.#publish({ type: "racer_joined", raceId: this.#race.id, player });
+      return { ok: true, queued: false, message: `${player.name} foi adicionado à corrida em andamento.` };
     }
     if (this.#race?.status === "betting") {
       return { ok: false, message: "As apostas já começaram. Tente entrar na próxima corrida." };
     }
-    if (this.#entrants.has(user.id)) {
-      return { ok: false, message: `${user.name} já está na fila.` };
+    if (this.#entrants.has(player.id)) {
+      return { ok: false, message: `${player.name} já está na fila.` };
     }
     if (this.#entrants.size >= MAX_RACERS) {
       return { ok: false, message: "A fila está cheia (máximo de 8 corredores)." };
     }
 
-    this.#entrants.set(user.id, user);
-    this.#publish({ type: "player_joined", player: user });
-    return { ok: true, queued: true, message: `${user.name} entrou na fila da corrida.` };
+    this.#entrants.set(player.id, player);
+    this.#publish({ type: "player_joined", player });
+    return { ok: true, queued: true, message: `${player.name} foi adicionado à fila da próxima corrida.` };
   }
 
   startAutomaticRace() {

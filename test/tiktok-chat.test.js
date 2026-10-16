@@ -10,11 +10,13 @@ test("normalizes current TikTok chat message fields", () => {
       nickname: "Live nickname",
       displayId: "tiktok_user",
     },
+    common: { msgId: "chat-message-1" },
   }), {
     username: "tiktok_user",
     nickname: "Live nickname",
     comment: "!entrar PlayerOne",
     userId: "12345",
+    messageId: "chat-message-1",
   });
 });
 
@@ -31,5 +33,6 @@ test("supports legacy TikTok chat message field names", () => {
     nickname: "Legacy nickname",
     comment: "!pontos",
     userId: "67890",
+    messageId: "",
   });
 });

@@ -20,7 +20,27 @@ test("starts a solo race automatically and lets viewers join while it is running
   assert.deepEqual(game.joinRobloxPlayer(first), {
     ok: true,
     queued: true,
-    message: "PlayerOne entrou na fila da corrida.",
+    message: "PlayerOne foi adicionado à fila da próxima corrida.",
+  });
+
+  test("keeps the exact TikTok comment with its Roblox join event", () => {
+    const game = new GameState();
+    const player = { id: "42", name: "PlayerOne" };
+    const source = {
+      commentId: 17,
+      tiktokMessageId: "chat-message-1",
+      tiktokUsername: "viewer_one",
+      text: "!entrar PlayerOne",
+    };
+
+    assert.equal(game.joinRobloxPlayer(player, source).queued, true);
+    assert.deepEqual(game.getEventsAfter(0)[0], {
+      id: 1,
+      type: "player_joined",
+      player: { ...player, source },
+    });
+    assert.deepEqual(game.startAutomaticRace().ok, true);
+    assert.deepEqual(game.getEventsAfter(1)[0].racers[0].source, source);
   });
 
   const started = game.startAutomaticRace();
@@ -29,7 +49,7 @@ test("starts a solo race automatically and lets viewers join while it is running
   assert.deepEqual(game.joinRobloxPlayer(second), {
     ok: true,
     queued: false,
-    message: "PlayerTwo entrou na corrida em andamento.",
+    message: "PlayerTwo foi adicionado à corrida em andamento.",
   });
   assert.equal(game.joinRobloxPlayer(second).ok, false);
   assert.deepEqual(game.getEventsAfter(0).map((event) => event.type), [

@@ -16,6 +16,7 @@ const recentGiftList = document.querySelector("#recent-gift-list");
 const testButton = document.querySelector("#test-roblox-button");
 const testMessage = document.querySelector("#test-message");
 let cursor = 0;
+let commentUpdateCursor = 0;
 let totalComments = 0;
 let lastKnownLive = false;
 let polling = false;
@@ -23,6 +24,7 @@ let renderedGiftConfig = "";
 let renderedRecentGifts = "";
 let giftConfig = [];
 let observedGifts = [];
+const commentRows = new Map();
 
 const effectLabels = {
   confetti: "Chuva de confete",
@@ -223,6 +225,7 @@ function appendComment(comment) {
   if (emptyState.isConnected) emptyState.remove();
   const row = document.createElement("article");
   row.className = "comment";
+  row.dataset.commentId = comment.id;
 
   const avatar = document.createElement("div");
   avatar.className = "comment-avatar";
@@ -254,11 +257,31 @@ function appendComment(comment) {
   if (label) {
     const tag = document.createElement("span");
     tag.className = "comment-tag";
-    tag.textContent = label;
+    tag.textContent = `COMANDO ${label}`;
     main.append(tag);
+  }
+  if (comment.commandResult) {
+    const result = document.createElement("p");
+    result.className = "comment-result";
+    result.textContent = comment.commandResult;
+    main.append(result);
   }
   row.append(avatar, main);
   feed.append(row);
+  commentRows.set(comment.id, row);
+}
+
+function updateCommentResult(update) {
+  const row = commentRows.get(update.commentId);
+  if (!row) return;
+
+  let result = row.querySelector(".comment-result");
+  if (!result) {
+    result = document.createElement("p");
+    result.className = "comment-result";
+    row.querySelector(".comment-main").append(result);
+  }
+  result.textContent = update.commandResult;
 }
 
 async function poll() {
@@ -267,7 +290,7 @@ async function poll() {
   try {
     const [status, result] = await Promise.all([
       api("/api/status"),
-      api(`/api/comments?after=${cursor}`),
+      api(`/api/comments?after=${cursor}&updatesAfter=${commentUpdateCursor}`),
     ]);
     renderStatus(status.live);
     renderGiftConfiguration(status.giftConfig);
@@ -278,8 +301,17 @@ async function poll() {
       cursor = Math.max(cursor, comment.id);
       totalComments += 1;
     }
+    for (const update of result.updates) {
+      updateCommentResult(update);
+      commentUpdateCursor = Math.max(commentUpdateCursor, update.id);
+    }
+    commentUpdateCursor = Math.max(commentUpdateCursor, result.updateCursor);
     while (feed.querySelectorAll(".comment").length > 200) {
-      feed.querySelector(".comment")?.remove();
+      const oldest = feed.querySelector(".comment");
+      if (oldest) {
+        commentRows.delete(Number(oldest.dataset.commentId));
+        oldest.remove();
+      }
     }
     if (wasNearBottom) feed.scrollTop = feed.scrollHeight;
     countLabel.textContent = String(totalComments);
@@ -404,6 +436,7 @@ recentGiftList.addEventListener("click", handleGiftAction);
 
 keyInput.addEventListener("input", () => {
   cursor = 0;
+  commentUpdateCursor = 0;
   poll();
 });
 
