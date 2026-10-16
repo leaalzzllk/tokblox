@@ -22,7 +22,7 @@ npm install
 Copy-Item .env.example .env
 ```
 
-Edite `.env`: configure chaves aleatórias diferentes, cada uma com pelo menos 32 caracteres, em `ROBLOX_API_KEY` e `DASHBOARD_API_KEY`. A primeira é usada pelo servidor Roblox; a segunda protege os comandos do painel. `TIKTOK_USERNAME` é opcional: se preenchido, o gateway tenta conectar automaticamente ao iniciar; se deixado como está, conecte pelo painel.
+Edite `.env`: configure uma `ROBLOX_API_KEY` aleatória com pelo menos 32 caracteres e uma `DASHBOARD_API_KEY` com pelo menos 4 caracteres. A primeira é usada pelo servidor Roblox; a segunda protege o painel. Uma chave de painel mais longa é recomendada porque o site é público. `TIKTOK_USERNAME` é opcional: se preenchido, o gateway tenta conectar automaticamente ao iniciar; se deixado como está, conecte pelo painel.
 
 Execute durante uma live:
 
@@ -54,7 +54,7 @@ O script Roblox precisa estar ativo para mostrar os efeitos. Presentes apenas di
 
 ## 2. Publicar no Render
 
-O arquivo `render.yaml` configura o TOKBLOX como um serviço web Node.js, instala as dependências com `npm ci`, usa a porta fornecida pelo Render, verifica a rota `/health` e gera chaves seguras para `ROBLOX_API_KEY` e `DASHBOARD_API_KEY`.
+O arquivo `render.yaml` configura o TOKBLOX como um serviço web Node.js, instala as dependências com `npm ci`, usa a porta fornecida pelo Render, verifica a rota `/health` e gera chaves para `ROBLOX_API_KEY` e `DASHBOARD_API_KEY`. A `ROBLOX_API_KEY` precisa ter pelo menos 32 caracteres; a `DASHBOARD_API_KEY`, pelo menos 4. Para o painel, você pode substituir o valor gerado por uma chave própria nas variáveis do serviço, mas uma chave maior é mais segura.
 
 1. Envie este projeto para um repositório GitHub.
 2. No Render, escolha **New → Blueprint**, conecte o repositório e confirme a implantação do `render.yaml`.

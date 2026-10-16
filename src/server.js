@@ -23,8 +23,8 @@ const GIFT_EFFECTS = new Set(["confetti", "neon", "celebration"]);
 if (!ROBLOX_API_KEY || ROBLOX_API_KEY.length < 32) {
   throw new Error("ROBLOX_API_KEY deve ter pelo menos 32 caracteres.");
 }
-if (!DASHBOARD_API_KEY || DASHBOARD_API_KEY.length < 32) {
-  throw new Error("DASHBOARD_API_KEY deve ter pelo menos 32 caracteres.");
+if (!DASHBOARD_API_KEY || DASHBOARD_API_KEY.length < 4) {
+  throw new Error("DASHBOARD_API_KEY deve ter pelo menos 4 caracteres.");
 }
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
   throw new Error("PORT deve ser uma porta válida.");
