@@ -280,7 +280,7 @@ function connectToLive(username) {
       }
       if (generation !== liveGeneration) return;
 
-      const connection = new TikTokLiveConnection(cleanUsername);
+      const connection = new TikTokLiveConnection(cleanUsername, {});
       liveConnection = connection;
       connection.on(WebcastEvent.CHAT, (data) => {
         handleComment(data).catch((error) => {
