@@ -160,14 +160,15 @@ test("rejects invalid race results and makes result retries idempotent", () => {
   assert.equal(game.finishRace(1, "2").status, 409);
 });
 
-test("publishes gift effects to Roblox without changing race state", () => {
+test("publishes configured gift actions to Roblox without changing race state", () => {
   const game = new GameState();
   game.publishGiftEffect({
     giftId: "5655",
     giftName: "Rosa",
     sender: "viewer1",
+    senderTikTokUserId: "viewer-id-1",
     count: 2,
-    effect: "confetti",
+    action: "boost_sender",
   });
 
   assert.deepEqual(game.getEventsAfter(0), [{
@@ -176,8 +177,9 @@ test("publishes gift effects to Roblox without changing race state", () => {
     giftId: "5655",
     giftName: "Rosa",
     sender: "viewer1",
+    senderTikTokUserId: "viewer-id-1",
     count: 2,
-    effect: "confetti",
+    action: "boost_sender",
   }]);
 });
 

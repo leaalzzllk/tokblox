@@ -1,6 +1,5 @@
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local Debris = game:GetService("Debris")
 local Workspace = game:GetService("Workspace")
 
 local API_BASE_URL = "https://tokblox.onrender.com"
@@ -10,7 +9,9 @@ local TRACK_LENGTH = 300
 local RACE_JOIN_WINDOW_SECONDS = 30
 local MAX_RACERS = 8
 local LIKE_BOOST_PER_LIKE = 0.01
-local MAX_LIKE_SPEED_MULTIPLIER = 2
+local MAX_SPEED_MULTIPLIER = 2
+local MIN_GIFT_SPEED_MULTIPLIER = 0.2
+local MAX_GIFT_SPEED_MULTIPLIER = 2
 
 local carsFolder = Instance.new("Folder")
 carsFolder.Name = "LiveRaceCars"
@@ -165,6 +166,7 @@ local function addRacerToRace(race, player)
 		baseSpeed = baseSpeed,
 		speed = baseSpeed,
 		likes = 0,
+		giftSpeedMultiplier = 1,
 		distance = 0,
 		finishedAt = nil,
 	})
@@ -236,51 +238,12 @@ local function runRace(event)
 	raceRunning = false
 end
 
-local function showGiftEffect(event)
-	for _, car in pairs(carsById) do
-		local chassis = car.PrimaryPart
-		if chassis then
-			if event.effect == "confetti" then
-				local attachment = Instance.new("Attachment")
-				attachment.Parent = chassis
-				local confetti = Instance.new("ParticleEmitter")
-				confetti.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-				confetti.Color = ColorSequence.new(Color3.fromRGB(197, 243, 107), Color3.fromRGB(242, 89, 178))
-				confetti.Lifetime = NumberRange.new(0.8, 1.5)
-				confetti.Speed = NumberRange.new(8, 16)
-				confetti.SpreadAngle = Vector2.new(180, 180)
-				confetti.Parent = attachment
-				confetti:Emit(math.min(event.count * 8, 80))
-				Debris:AddItem(attachment, 2)
-			elseif event.effect == "neon" then
-				local highlight = Instance.new("Highlight")
-				highlight.Adornee = car
-				highlight.FillColor = Color3.fromRGB(197, 243, 107)
-				highlight.OutlineColor = Color3.fromRGB(242, 89, 178)
-				highlight.FillTransparency = 0.35
-				highlight.Parent = car
-				Debris:AddItem(highlight, 3)
-			elseif event.effect == "celebration" then
-				local billboard = Instance.new("BillboardGui")
-				billboard.Adornee = chassis
-				billboard.Size = UDim2.fromOffset(240, 48)
-				billboard.StudsOffset = Vector3.new(0, 6, 0)
-				billboard.AlwaysOnTop = true
-				billboard.Parent = car
-				local text = Instance.new("TextLabel")
-				text.Size = UDim2.fromScale(1, 1)
-				text.BackgroundTransparency = 1
-				text.TextColor3 = Color3.fromRGB(197, 243, 107)
-				text.TextStrokeTransparency = 0.2
-				text.Font = Enum.Font.GothamBold
-				text.TextScaled = true
-				text.Text = "OBRIGADO, " .. string.upper(event.sender) .. "!"
-				text.Parent = billboard
-				Debris:AddItem(billboard, 3)
-			end
-		end
-	end
-	print(string.format("Presente %s de %s acionou %s.", event.giftName, event.sender, event.effect))
+local function updateRacerSpeed(racer)
+	local likeMultiplier = 1 + racer.likes * LIKE_BOOST_PER_LIKE
+	racer.speed = racer.baseSpeed * math.min(
+		likeMultiplier * racer.giftSpeedMultiplier,
+		MAX_SPEED_MULTIPLIER
+	)
 end
 
 local function applyLikeBoost(event)
@@ -291,8 +254,8 @@ local function applyLikeBoost(event)
 	for _, racer in ipairs(activeRace.racers) do
 		if racer.player.id == event.playerId and not racer.finishedAt then
 			racer.likes = math.min(racer.likes + math.floor(event.count), 100)
-			local multiplier = math.min(1 + racer.likes * LIKE_BOOST_PER_LIKE, MAX_LIKE_SPEED_MULTIPLIER)
-			racer.speed = racer.baseSpeed * multiplier
+			updateRacerSpeed(racer)
+			local multiplier = math.min(1 + racer.likes * LIKE_BOOST_PER_LIKE, MAX_SPEED_MULTIPLIER)
 			print(string.format(
 				"%s recebeu %d curtida(s): velocidade agora %.1f (+%d%%).",
 				racer.player.name,
@@ -301,6 +264,71 @@ local function applyLikeBoost(event)
 				math.floor((multiplier - 1) * 100)
 			))
 			return
+		end
+	end
+end
+
+local function findRacerByTikTokUser(event)
+	if not activeRace then
+		return nil
+	end
+	local senderId = tostring(event.senderTikTokUserId or "")
+	local senderName = string.lower(tostring(event.senderTikTokUsername or ""):gsub("^@", ""))
+	for _, racer in ipairs(activeRace.racers) do
+		local source = racer.player.source or {}
+		local sourceName = string.lower(tostring(source.tiktokUsername or ""):gsub("^@", ""))
+		if (senderId ~= "" and source.tiktokUserId == senderId)
+			or (senderName ~= "" and sourceName == senderName) then
+			if not racer.finishedAt then
+				return racer
+			end
+		end
+	end
+	return nil
+end
+
+local function applyGiftAction(event)
+	if not activeRace or type(event.count) ~= "number" or event.count < 1 then
+		return
+	end
+
+	local giftCount = math.min(math.floor(event.count), 999)
+	if event.action == "slow_leader" then
+		local leader
+		for _, racer in ipairs(activeRace.racers) do
+			if not racer.finishedAt and (not leader or racer.distance > leader.distance) then
+				leader = racer
+			end
+		end
+		if not leader then
+			return
+		end
+		leader.giftSpeedMultiplier = math.max(
+			MIN_GIFT_SPEED_MULTIPLIER,
+			leader.giftSpeedMultiplier * (0.8 ^ giftCount)
+		)
+		updateRacerSpeed(leader)
+		print(string.format("%s recebeu %s: velocidade reduzida; agora %.1f.", leader.player.name, event.giftName, leader.speed))
+	elseif event.action == "boost_sender" or event.action == "add_likes" then
+		local racer = findRacerByTikTokUser(event)
+		if not racer then
+			print(string.format("Presente %s recebido, mas @%s não tem carro ativo na corrida.", event.giftName, event.sender))
+			return
+		end
+
+		if event.action == "boost_sender" then
+			racer.giftSpeedMultiplier = math.min(
+				MAX_GIFT_SPEED_MULTIPLIER,
+				racer.giftSpeedMultiplier * (1.3 ^ giftCount)
+			)
+			updateRacerSpeed(racer)
+			print(string.format("%s recebeu %s: velocidade agora %.1f.", racer.player.name, event.giftName, racer.speed))
+		else
+			local previousLikes = racer.likes
+			racer.likes = math.min(racer.likes + 50 * giftCount, 100)
+			local addedLikes = racer.likes - previousLikes
+			updateRacerSpeed(racer)
+			print(string.format("%s recebeu %s: +%d curtidas; velocidade agora %.1f.", racer.player.name, event.giftName, addedLikes, racer.speed))
 		end
 	end
 end
@@ -345,7 +373,7 @@ local function handleEvent(event)
 		laneById = {}
 		nextLane = 0
 	elseif event.type == "gift_effect" then
-		showGiftEffect(event)
+		applyGiftAction(event)
 	elseif event.type == "like_boost" then
 		applyLikeBoost(event)
 	elseif event.type == "connection_test" then

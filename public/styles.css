@@ -112,31 +112,21 @@ h2 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -.2px; }
 .gift-header-icon { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid rgba(242,89,178,.24); border-radius: 13px; color: #f28dcc; background: rgba(242,89,178,.08); font-size: 21px; }
 .gift-auto-note { display: flex; align-items: center; gap: 8px; margin-top: 16px; padding: 12px; border: 1px solid rgba(197,243,107,.12); border-radius: 8px; color: #aeb99a; background: rgba(197,243,107,.04); font-size: 10px; }
 .gift-auto-note span { color: var(--lime); }
-.manual-gift-form { display: grid; grid-template-columns: minmax(120px, .8fr) minmax(150px, 1.2fr) minmax(145px, 1fr) auto; align-items: end; gap: 10px; margin-top: 14px; padding: 14px; border: 1px solid #30313b; border-radius: 11px; background: rgba(15,16,22,.32); }
-.manual-gift-form label { display: grid; gap: 6px; color: #a5a6af; font-size: 9px; }
-.manual-gift-form input, .manual-gift-form select { width: 100%; height: 34px; padding: 0 9px; border: 1px solid #383943; border-radius: 6px; outline: 0; color: #e5e5e9; background: #15161d; font-size: 10px; }
-.manual-gift-form input:focus, .manual-gift-form select:focus { border-color: #8dab55; }
-.manual-gift-form .button { height: 34px; padding-inline: 12px; font-size: 9px; }
-.gift-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
-.gift-list-section { min-width: 0; padding: 15px; border: 1px solid #30313b; border-radius: 11px; background: rgba(15,16,22,.32); }
+.gift-list-section { min-width: 0; margin-top: 14px; padding: 15px; border: 1px solid #30313b; border-radius: 11px; background: rgba(15,16,22,.32); }
 .gift-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 11px; }
 .gift-list-heading h3 { margin: 0; color: #e7e7ec; font-size: 11px; }
-.gift-count, .recent-live-indicator { color: #80828d; font-family: Consolas, "Courier New", monospace; font-size: 9px; }
-.recent-live-indicator { display: inline-flex; align-items: center; gap: 6px; color: #9ab69b; font-family: inherit; }
-.recent-live-indicator span { width: 6px; height: 6px; border-radius: 50%; background: #69ce9b; box-shadow: 0 0 7px rgba(105,206,155,.55); }
-.gift-config-list, .recent-gift-list { display: flex; flex-direction: column; gap: 7px; }
+.gift-count { color: #80828d; font-family: Consolas, "Courier New", monospace; font-size: 9px; }
+.gift-config-list { display: flex; flex-direction: column; gap: 7px; max-height: 65vh; overflow-y: auto; scrollbar-color: #393a43 transparent; scrollbar-width: thin; }
 .gift-list-empty { padding: 21px 8px; color: #757782; font-size: 10px; text-align: center; }
-.gift-config-item, .recent-gift-item { min-height: 48px; display: flex; align-items: center; gap: 10px; padding: 8px 9px; border: 1px solid rgba(255,255,255,.055); border-radius: 8px; background: rgba(255,255,255,.018); }
+.gift-config-item { min-height: 48px; display: flex; align-items: center; gap: 10px; padding: 8px 9px; border: 1px solid rgba(255,255,255,.055); border-radius: 8px; background: rgba(255,255,255,.018); }
 .gift-emoji { flex: 0 0 30px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; color: #f3a0d3; background: rgba(242,89,178,.1); font-size: 15px; }
 .gift-item-main { flex: 1; min-width: 0; }
 .gift-item-name { overflow: hidden; color: #e5e5e9; font-size: 10px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
 .gift-item-subtitle { margin-top: 4px; color: #7d7f89; font-family: Consolas, "Courier New", monospace; font-size: 8px; }
-.gift-effect-badge { padding: 5px 7px; border: 1px solid rgba(197,243,107,.12); border-radius: 6px; color: #bfdb8d; background: rgba(197,243,107,.05); font-size: 8px; white-space: nowrap; }
 .gift-action-button { min-height: 28px; padding: 0 8px; border: 1px solid #42434e; border-radius: 6px; color: #d4e6ae; background: #20221e; font-size: 8px; font-weight: 700; white-space: nowrap; }
 .gift-action-button:hover { border-color: #788c53; }
 .gift-effect-select { max-width: 150px; height: 29px; padding: 0 6px; border: 1px solid #383943; border-radius: 6px; outline: 0; color: #d8d8df; background: #15161d; font-size: 8px; }
 .gift-effect-select:focus { border-color: #8dab55; }
-.gift-remove-button { width: 27px; height: 27px; border: 1px solid #3e3038; border-radius: 6px; color: #ef98ae; background: #251b21; font-size: 14px; line-height: 1; }
 .gift-note { display: flex; align-items: flex-start; gap: 7px; margin: 14px 0 0; color: #858792; font-size: 9px; line-height: 1.6; }
 .gift-note span { color: var(--lime); }
 
@@ -221,10 +211,6 @@ h2 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -.2px; }
   .auto-refresh .refresh-icon { font-size: 13px; }
   .page-footer { flex-wrap: wrap; padding: 12px 0; line-height: 1.6; }
   .gift-panel { padding: 15px; }
-  .gift-columns { grid-template-columns: 1fr; }
-  .manual-gift-form { grid-template-columns: 1fr 1fr; }
-  .manual-gift-form .button { width: 100%; }
-  .gift-config-item, .recent-gift-item { gap: 7px; padding-inline: 7px; }
-  .gift-effect-badge { max-width: 105px; overflow: hidden; text-overflow: ellipsis; }
-  .gift-effect-select { max-width: 120px; }
+  .gift-config-item { gap: 7px; padding-inline: 7px; }
+  .gift-effect-select { max-width: 175px; }
 }

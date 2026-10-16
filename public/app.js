@@ -12,9 +12,6 @@ const countLabel = document.querySelector("#comment-count");
 const feedFooter = document.querySelector("#feed-footer");
 const giftMessage = document.querySelector("#gift-message");
 const giftConfigList = document.querySelector("#gift-config-list");
-const recentGiftList = document.querySelector("#recent-gift-list");
-const manualGiftForm = document.querySelector("#manual-gift-form");
-const manualGiftSubmit = document.querySelector("#manual-gift-submit");
 const testButton = document.querySelector("#test-roblox-button");
 const testMessage = document.querySelector("#test-message");
 let cursor = 0;
@@ -23,15 +20,16 @@ let totalComments = 0;
 let lastKnownLive = false;
 let polling = false;
 let renderedGiftConfig = "";
-let renderedRecentGifts = "";
 let giftConfig = [];
-let observedGifts = [];
+let giftCatalog = [];
+let observedGiftCatalogError = null;
 const commentRows = new Map();
 
-const effectLabels = {
-  confetti: "Chuva de confete",
-  neon: "Brilho neon",
-  celebration: "Celebração",
+const giftActionLabels = {
+  none: "Nenhuma ação",
+  slow_leader: "Reduzir líder em 20%",
+  boost_sender: "Acelerar remetente em 30%",
+  add_likes: "Adicionar 50 curtidas",
 };
 
 function setMessage(text, kind = "") {
@@ -78,22 +76,31 @@ function renderStatus(live) {
   lastKnownLive = live.connected;
 }
 
-function renderGiftConfiguration(config) {
-  const signature = JSON.stringify(config);
+function renderGiftConfiguration(config, catalog) {
+  const allGiftsById = new Map(catalog.map((gift) => [gift.giftId, gift]));
+  for (const gift of config) {
+    if (!allGiftsById.has(gift.giftId)) {
+      allGiftsById.set(gift.giftId, { giftId: gift.giftId, giftName: gift.giftName });
+    }
+  }
+  const allGifts = [...allGiftsById.values()];
+  const signature = JSON.stringify({ config, allGifts });
   if (signature === renderedGiftConfig) return;
   renderedGiftConfig = signature;
   giftConfig = config;
-  document.querySelector("#gift-config-count").textContent = `${config.length} / 100`;
+  giftCatalog = allGifts;
+  document.querySelector("#gift-config-count").textContent = `${config.filter((gift) => gift.action !== "none").length} configurados · ${allGifts.length} presentes`;
   giftConfigList.replaceChildren();
-  if (config.length === 0) {
+  if (allGifts.length === 0) {
     const empty = document.createElement("div");
     empty.className = "gift-list-empty";
-    empty.textContent = "Nenhum presente configurado ainda.";
+    empty.textContent = "Conecte à live para carregar os presentes disponíveis.";
     giftConfigList.append(empty);
     return;
   }
 
-  for (const gift of config) {
+  const configuredById = new Map(config.map((gift) => [gift.giftId, gift]));
+  for (const gift of allGifts) {
     const item = document.createElement("div");
     item.className = "gift-config-item";
     const icon = document.createElement("span");
@@ -108,110 +115,56 @@ function renderGiftConfiguration(config) {
     subtitle.className = "gift-item-subtitle";
     subtitle.textContent = `ID ${gift.giftId}`;
     main.append(name, subtitle);
-    const effect = createEffectSelect(gift.effect);
-    effect.dataset.effectForGiftId = gift.giftId;
-    const remove = document.createElement("button");
-    remove.className = "gift-remove-button";
-    remove.type = "button";
-    remove.dataset.removeGiftId = gift.giftId;
-    remove.setAttribute("aria-label", `Remover configuração de ${gift.giftName}`);
-    remove.textContent = "×";
+    const effect = createGiftActionSelect(configuredById.get(gift.giftId)?.action ?? "none");
+    effect.dataset.actionForGiftId = gift.giftId;
     const save = document.createElement("button");
     save.className = "gift-action-button";
     save.type = "button";
     save.dataset.saveGiftId = gift.giftId;
     save.dataset.saveGiftName = gift.giftName;
     save.textContent = "Salvar";
-    item.append(icon, main, effect, save, remove);
+    item.append(icon, main, effect, save);
     giftConfigList.append(item);
   }
 }
 
-function createEffectSelect(selectedEffect) {
+function createGiftActionSelect(selectedAction) {
   const select = document.createElement("select");
   select.className = "gift-effect-select";
-  select.setAttribute("aria-label", "O que acontece no jogo");
-  for (const [value, label] of Object.entries(effectLabels)) {
+  select.setAttribute("aria-label", "Ação deste presente na corrida");
+  for (const [value, label] of Object.entries(giftActionLabels)) {
     const option = document.createElement("option");
     option.value = value;
     option.textContent = label;
-    option.selected = value === selectedEffect;
+    option.selected = value === selectedAction;
     select.append(option);
   }
   return select;
 }
 
-function renderRecentGifts(gifts) {
-  const signature = JSON.stringify(gifts);
-  if (signature === renderedRecentGifts) return;
-  renderedRecentGifts = signature;
-  observedGifts = gifts;
-  recentGiftList.replaceChildren();
-  if (gifts.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "gift-list-empty";
-    empty.textContent = "Conecte a live para detectar os presentes enviados.";
-    recentGiftList.append(empty);
-    return;
-  }
-
-  const latestByGiftId = new Map();
-  for (const gift of gifts) latestByGiftId.set(gift.giftId, gift);
-  for (const gift of [...latestByGiftId.values()].reverse().slice(0, 8)) {
-    const item = document.createElement("div");
-    item.className = "recent-gift-item";
-    const icon = document.createElement("span");
-    icon.className = "gift-emoji";
-    icon.textContent = "✦";
-    const main = document.createElement("div");
-    main.className = "gift-item-main";
-    const name = document.createElement("div");
-    name.className = "gift-item-name";
-    name.textContent = `${gift.giftName}${gift.count > 1 ? ` ×${gift.count}` : ""}`;
-    const subtitle = document.createElement("div");
-    subtitle.className = "gift-item-subtitle";
-    subtitle.textContent = `ID ${gift.giftId} · ${gift.sender}`;
-    main.append(name, subtitle);
-    item.append(icon, main);
-
-    const configured = giftConfig.find((entry) => entry.giftId === gift.giftId);
-    const effect = createEffectSelect(configured?.effect ?? "confetti");
-    effect.dataset.effectForGiftId = gift.giftId;
-    const action = document.createElement("button");
-    action.className = "gift-action-button";
-    action.type = "button";
-    action.dataset.saveGiftId = gift.giftId;
-    action.dataset.saveGiftName = gift.giftName;
-    action.textContent = configured ? "Salvar" : "Adicionar";
-    item.append(effect, action);
-    recentGiftList.append(item);
+function renderGiftCatalogError(error) {
+  if (error === observedGiftCatalogError) return;
+  observedGiftCatalogError = error;
+  if (error) {
+    giftMessage.textContent = `Não foi possível carregar os presentes disponíveis: ${error}`;
+    giftMessage.dataset.kind = "error";
+  } else if (giftMessage.dataset.kind === "error") {
+    giftMessage.textContent = "";
+    giftMessage.dataset.kind = "";
   }
 }
 
-async function saveGiftConfiguration(giftId, giftName, effect) {
+async function saveGiftConfiguration(giftId, giftName, action) {
   const nextConfig = giftConfig.filter((gift) => gift.giftId !== giftId);
-  nextConfig.push({ giftId, giftName, effect });
-  if (nextConfig.length > 100) {
-    throw new Error("O limite é de 100 presentes configurados.");
+  if (action !== "none") {
+    nextConfig.push({ giftId, giftName, action });
   }
   const result = await api("/api/gifts", {
     method: "PUT",
     body: JSON.stringify({ config: nextConfig }),
   });
-  renderGiftConfiguration(result.config);
-  renderedRecentGifts = "";
-  renderRecentGifts(observedGifts);
-}
-
-async function removeGiftConfiguration(giftId) {
-  const nextConfig = giftConfig.filter((gift) => gift.giftId !== giftId);
-  const result = await api("/api/gifts", {
-    method: "PUT",
-    body: JSON.stringify({ config: nextConfig }),
-  });
-  renderGiftConfiguration(result.config);
-  renderedRecentGifts = "";
-  renderRecentGifts(observedGifts);
+  renderedGiftConfig = "";
+  renderGiftConfiguration(result.config, giftCatalog);
 }
 
 function commandLabel(comment) {
@@ -295,8 +248,8 @@ async function poll() {
       api(`/api/comments?after=${cursor}&updatesAfter=${commentUpdateCursor}`),
     ]);
     renderStatus(status.live);
-    renderGiftConfiguration(status.giftConfig);
-    renderRecentGifts(status.recentGifts);
+    renderGiftConfiguration(status.giftConfig, status.giftCatalog);
+    renderGiftCatalogError(status.giftCatalogError);
     const wasNearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80;
     for (const comment of result.comments) {
       appendComment(comment);
@@ -399,31 +352,20 @@ testButton.addEventListener("click", async () => {
 });
 
 async function handleGiftAction(event) {
-  const removeButton = event.target.closest("[data-remove-gift-id]");
-  if (removeButton) {
-    try {
-      await removeGiftConfiguration(removeButton.dataset.removeGiftId);
-      giftMessage.textContent = "Ação removida deste presente.";
-      giftMessage.dataset.kind = "success";
-    } catch (error) {
-      giftMessage.textContent = error.message;
-      giftMessage.dataset.kind = "error";
-    }
-    return;
-  }
-
   const saveButton = event.target.closest("[data-save-gift-id]");
   if (!saveButton) return;
-  const row = saveButton.closest(".gift-config-item, .recent-gift-item");
-  const effect = row.querySelector("[data-effect-for-gift-id]").value;
+  const row = saveButton.closest(".gift-config-item");
+  const action = row.querySelector("[data-action-for-gift-id]").value;
   saveButton.disabled = true;
   try {
     await saveGiftConfiguration(
       saveButton.dataset.saveGiftId,
       saveButton.dataset.saveGiftName,
-      effect,
+      action,
     );
-    giftMessage.textContent = `Ação salva para ${saveButton.dataset.saveGiftName}.`;
+    giftMessage.textContent = action === "none"
+      ? `Ação desativada para ${saveButton.dataset.saveGiftName}.`
+      : `Ação salva para ${saveButton.dataset.saveGiftName}.`;
     giftMessage.dataset.kind = "success";
   } catch (error) {
     giftMessage.textContent = error.message;
@@ -434,27 +376,6 @@ async function handleGiftAction(event) {
 }
 
 giftConfigList.addEventListener("click", handleGiftAction);
-recentGiftList.addEventListener("click", handleGiftAction);
-
-manualGiftForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const formData = new FormData(manualGiftForm);
-  const giftId = String(formData.get("giftId")).trim();
-  const giftName = String(formData.get("giftName")).trim();
-  const effect = String(formData.get("effect"));
-  manualGiftSubmit.disabled = true;
-  try {
-    await saveGiftConfiguration(giftId, giftName, effect);
-    manualGiftForm.reset();
-    giftMessage.textContent = `Presente "${giftName}" configurado.`;
-    giftMessage.dataset.kind = "success";
-  } catch (error) {
-    giftMessage.textContent = error.message;
-    giftMessage.dataset.kind = "error";
-  } finally {
-    manualGiftSubmit.disabled = false;
-  }
-});
 
 keyInput.addEventListener("input", () => {
   cursor = 0;

@@ -46,13 +46,14 @@ Durante a corrida, as curtidas de uma pessoa impulsionam o carro associado à co
 
 ## Configurar presentes da live
 
-No painel, abra a aba **Presentes**. Você pode configurar sem conectar a live preenchendo manualmente o ID e o nome do presente e escolhendo o efeito. O ID deve ser o ID numérico do presente no TikTok. Também é possível conectar à live: presentes enviados aparecem em **Presentes detectados** com nome e ID preenchidos pelo TikTok, e você pode escolher o efeito e clicar em **Adicionar** ou **Salvar**:
+No painel, abra **Configurar presentes** e conecte-se à live. O gateway carrega o catálogo de presentes disponíveis no TikTok, sem precisar digitar ID ou nome, e mostra uma ação configurável para cada presente:
 
-- **Chuva de confete**: partículas visuais ao redor dos carros.
-- **Brilho neon nos carros**: realce temporário nos carros.
-- **Mensagem de celebração**: mostra o nome de quem enviou o presente acima dos carros.
+- **Nenhuma ação**: ignora o presente no jogo.
+- **Reduzir líder em 20%**: reduz a velocidade do carro que está mais à frente em 20% por presente enviado, até um limite de 80% de redução.
+- **Acelerar remetente em 30%**: aumenta em 30% por presente a velocidade do carro da pessoa que enviou, até o limite total de 2x a velocidade inicial.
+- **Adicionar 50 curtidas**: soma 50 curtidas por presente ao carro de quem enviou; cada curtida aumenta a velocidade em 1%, até o mesmo limite total de 2x.
 
-O script Roblox precisa estar ativo para mostrar os efeitos. Presentes apenas disparam efeitos visuais: não alteram velocidade, apostas ou saldo virtual. Configurações são salvas em `data/gift-config.json` e continuam após reiniciar o gateway. Presente não configurado ainda aparece na lista de presentes detectados, mas não aciona efeito. Presentes enviados em sequência só são processados quando a sequência termina.
+As ações de velocidade e curtidas só afetam carros ainda em corrida. Para acelerar o remetente ou adicionar curtidas, essa pessoa precisa ter entrado na corrida pelo TikTok com a mesma conta. O script Roblox precisa estar ativo para aplicar as ações. As configurações são salvas em `data/gift-config.json` e continuam após reiniciar o gateway. Presentes enviados em sequência são aplicados quando a sequência termina.
 
 ## 2. Publicar no Render
 

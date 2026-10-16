@@ -82,54 +82,23 @@
           <div>
             <p class="section-kicker">PERSONALIZE A LIVE</p>
             <h2>Configurar presentes</h2>
-            <p class="gift-description">Associe um presente a um efeito visual no Roblox. Presentes não dão vantagem na corrida nem viram pontos.</p>
+            <p class="gift-description">Escolha uma ação de corrida para cada presente da live. O catálogo é carregado ao conectar.</p>
           </div>
           <div class="gift-header-icon" aria-hidden="true">✦</div>
         </div>
-        <div class="gift-auto-note"><span>✦</span> Configure presentes manualmente ou escolha um presente detectado automaticamente na live.</div>
+        <div class="gift-auto-note"><span>✦</span> Conecte à live para carregar os presentes disponíveis e configurar o que cada um faz na corrida.</div>
         <p id="gift-message" class="message" role="status" aria-live="polite"></p>
 
-        <form id="manual-gift-form" class="manual-gift-form">
-          <label>
-            <span>ID do presente</span>
-            <input id="manual-gift-id" name="giftId" type="text" inputmode="numeric" pattern="[0-9]{1,20}" maxlength="20" placeholder="Ex.: 5655" required>
-          </label>
-          <label>
-            <span>Nome do presente</span>
-            <input id="manual-gift-name" name="giftName" type="text" maxlength="80" placeholder="Ex.: Rosa" required>
-          </label>
-          <label>
-            <span>Efeito no Roblox</span>
-            <select id="manual-gift-effect" name="effect" class="gift-effect-select">
-              <option value="confetti">Chuva de confete</option>
-              <option value="neon">Brilho neon</option>
-              <option value="celebration">Celebração</option>
-            </select>
-          </label>
-          <button id="manual-gift-submit" class="button button-primary" type="submit">Adicionar presente</button>
-        </form>
-
-        <div class="gift-columns">
-          <section class="gift-list-section">
-            <div class="gift-list-heading">
-              <div><p class="section-kicker">REGRAS ATIVAS</p><h3>Presentes configurados</h3></div>
-              <span id="gift-config-count" class="gift-count">0 / 100</span>
-            </div>
-            <div id="gift-config-list" class="gift-config-list">
-              <div class="gift-list-empty">Nenhum presente configurado ainda.</div>
-            </div>
-          </section>
-          <section class="gift-list-section detected-section">
-            <div class="gift-list-heading">
-              <div><p class="section-kicker">DA SUA LIVE</p><h3>Presentes detectados</h3></div>
-              <span class="recent-live-indicator"><span></span> ao vivo</span>
-            </div>
-            <div id="recent-gift-list" class="recent-gift-list">
-              <div class="gift-list-empty">Conecte a live para detectar os presentes enviados.</div>
-            </div>
-          </section>
-        </div>
-        <p class="gift-note"><span>ⓘ</span> A lista é preenchida conforme os presentes chegam na live. Escolha um efeito e salve; nome e ID não precisam ser digitados. As regras ficam salvas no gateway.</p>
+        <section class="gift-list-section">
+          <div class="gift-list-heading">
+            <div><p class="section-kicker">CATÁLOGO DO TIKTOK</p><h3>O que cada presente faz</h3></div>
+            <span id="gift-config-count" class="gift-count">Conecte à live para carregar</span>
+          </div>
+          <div id="gift-config-list" class="gift-config-list">
+            <div class="gift-list-empty">Conecte à live para carregar os presentes disponíveis.</div>
+          </div>
+        </section>
+        <p class="gift-note"><span>ⓘ</span> Para quem envia o presente, o carro precisa estar participando da corrida. Ações salvas ficam no gateway; “Nenhuma ação” desativa o presente.</p>
       </section>
 
       <section id="test-panel" class="test-panel" hidden aria-labelledby="test-title">

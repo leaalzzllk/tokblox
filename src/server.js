@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { GameState, parseCommand } from "./game-state.js";
 import { normalizeTikTokChatMessage } from "./tiktok-chat.js";
-import { TikTokLiveConnection, WebcastEvent } from "tiktok-live-connector";
+import { RouteConfig, TikTokLiveConnection, WebcastEvent } from "tiktok-live-connector";
 
 const PORT = Number(process.env.PORT ?? 3000);
 const TIKTOK_USERNAME = process.env.TIKTOK_USERNAME?.replace(/^@/, "");
@@ -14,12 +14,13 @@ const DASHBOARD_API_KEY = process.env.DASHBOARD_API_KEY;
 const BETTING_WINDOW_MS = 20_000;
 const AUTO_RACE_DELAY_MS = 30_000;
 const MAX_COMMENTS = 500;
-const MAX_RECENT_GIFTS = 100;
-const MAX_REQUEST_BODY_LENGTH = 32 * 1024;
+const MAX_GIFT_CONFIG = 5000;
+const MAX_REQUEST_BODY_LENGTH = 5 * 1024 * 1024;
 const APP_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
 const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "data");
 const GIFT_CONFIG_PATH = path.join(DATA_DIR, "gift-config.json");
-const GIFT_EFFECTS = new Set(["confetti", "neon", "celebration"]);
+const GIFT_ACTIONS = new Set(["none", "slow_leader", "boost_sender", "add_likes"]);
+const LEGACY_GIFT_EFFECTS = new Set(["confetti", "neon", "celebration"]);
 
 if (!ROBLOX_API_KEY || ROBLOX_API_KEY.length < 32) {
   throw new Error("ROBLOX_API_KEY deve ter pelo menos 32 caracteres.");
@@ -35,8 +36,9 @@ const state = new GameState();
 const connectionTests = new Map();
 const comments = [];
 const commentUpdates = [];
-const recentGifts = [];
 let giftConfig = await loadGiftConfig();
+let giftCatalog = [];
+let giftCatalogError = null;
 let giftConfigWrites = Promise.resolve();
 let nextCommentId = 1;
 let nextCommentUpdateId = 1;
@@ -62,8 +64,8 @@ async function loadGiftConfig() {
 }
 
 function validateGiftConfig(value) {
-  if (!Array.isArray(value) || value.length > 100) {
-    throw new Error("A configuração deve conter no máximo 100 presentes.");
+  if (!Array.isArray(value) || value.length > MAX_GIFT_CONFIG) {
+    throw new Error(`A configuração deve conter no máximo ${MAX_GIFT_CONFIG} presentes.`);
   }
   const ids = new Set();
   return value.map((entry) => {
@@ -81,11 +83,16 @@ function validateGiftConfig(value) {
     if (!giftName || giftName.length > 80) {
       throw new Error("Informe um nome de presente de até 80 caracteres.");
     }
-    if (!GIFT_EFFECTS.has(entry.effect)) {
-      throw new Error("Selecione um efeito visual válido.");
+    const action = GIFT_ACTIONS.has(entry.action)
+      ? entry.action
+      : LEGACY_GIFT_EFFECTS.has(entry.effect)
+        ? "none"
+        : null;
+    if (!action) {
+      throw new Error("Selecione uma ação de corrida válida.");
     }
     ids.add(giftId);
-    return { giftId, giftName, effect: entry.effect };
+    return { giftId, giftName, action };
   });
 }
 
@@ -257,31 +264,26 @@ function handleGift(data) {
     return;
   }
   const giftName = String(data.giftDetails?.giftName ?? `Presente ${giftId}`).slice(0, 80);
-  const gift = {
-    id: `${Date.now()}-${randomUUID()}`,
-    giftId,
-    giftName,
-    sender: String(data.user?.nickname ?? data.user?.uniqueId ?? "Desconhecido").slice(0, 80),
-    count: Math.min(Math.max(Number(data.repeatCount) || 1, 1), 999),
-    timestamp: new Date().toISOString(),
-    effect: null,
-  };
+  const sender = String(data.user?.nickname ?? data.user?.uniqueId ?? "Desconhecido").slice(0, 80);
+  const count = Math.min(Math.max(Number(data.repeatCount) || 1, 1), 999);
+  if (!giftCatalog.some((gift) => gift.giftId === giftId)) {
+    giftCatalog = [...giftCatalog, { giftId, giftName }].slice(0, MAX_GIFT_CONFIG);
+  }
 
   const configured = giftConfig.find((entry) => entry.giftId === giftId);
-  if (configured) {
-    gift.effect = configured.effect;
+  if (configured && configured.action !== "none") {
     state.publishGiftEffect({
       giftId,
-      giftName: configured.giftName,
-      sender: gift.sender,
-      count: gift.count,
-      effect: configured.effect,
+      giftName,
+      sender,
+      senderTikTokUserId: String(data.user?.id ?? data.user?.userId ?? ""),
+      senderTikTokUsername: String(data.user?.displayId ?? data.user?.uniqueId ?? ""),
+      count,
+      action: configured.action,
     });
   }
 
-  recentGifts.push(gift);
-  if (recentGifts.length > MAX_RECENT_GIFTS) recentGifts.shift();
-  console.info(`Presente "${giftName}" (ID ${giftId}) recebido de @${data.user?.uniqueId ?? "desconhecido"}${configured ? `; efeito ${configured.effect}` : ""}.`);
+  console.info(`Presente "${giftName}" (ID ${giftId}) recebido de @${data.user?.uniqueId ?? "desconhecido"}${configured && configured.action !== "none" ? `; ação ${configured.action}` : ""}.`);
 }
 
 function handleLike(data) {
@@ -311,6 +313,8 @@ function connectToLive(username) {
   const previousConnection = liveConnection;
   const generation = ++liveGeneration;
   liveConnection = null;
+  giftCatalog = [];
+  giftCatalogError = null;
   liveStatus = { connected: false, connecting: true, username: cleanUsername, roomId: null, error: null };
 
   const connect = async () => {
@@ -343,6 +347,8 @@ function connectToLive(username) {
       });
       connection.on("disconnected", () => {
         if (liveConnection === connection) {
+          giftCatalog = [];
+          giftCatalogError = null;
           liveStatus = {
             ...liveStatus,
             connected: false,
@@ -358,8 +364,43 @@ function connectToLive(username) {
         await connection.disconnect();
         return;
       }
+      giftCatalog = [];
+      giftCatalogError = null;
       liveStatus = { connected: true, connecting: false, username: cleanUsername, roomId: room.roomId, error: null };
       console.info(`Conectado à live de @${cleanUsername} (sala ${room.roomId}).`);
+      try {
+        const gifts = await RouteConfig.fetchRoomGifts({
+          webClient: connection.webClient,
+          roomId: String(room.roomId),
+        });
+        if (liveConnection === connection) {
+          const giftsById = new Map();
+          for (const gift of gifts) {
+            const giftId = String(gift.id ?? gift.giftId ?? "");
+            const giftName = String(gift.name ?? gift.giftName ?? "").trim().slice(0, 80);
+            if (/^\d{1,20}$/.test(giftId) && giftName) {
+              giftsById.set(giftId, { giftId, giftName });
+            }
+          }
+          for (const observedGift of giftCatalog) {
+            if (!giftsById.has(observedGift.giftId)) {
+              giftsById.set(observedGift.giftId, observedGift);
+            }
+          }
+          for (const configured of giftConfig) {
+            if (!giftsById.has(configured.giftId)) {
+              giftsById.set(configured.giftId, { giftId: configured.giftId, giftName: configured.giftName });
+            }
+          }
+          giftCatalog = [...giftsById.values()].slice(0, MAX_GIFT_CONFIG);
+          console.info(`Catálogo TikTok carregado: ${giftsById.size} presentes.`);
+        }
+      } catch (error) {
+        if (liveConnection === connection) {
+          giftCatalogError = error.message;
+        }
+        console.error("Não foi possível carregar o catálogo de presentes do TikTok:", error);
+      }
     } catch (error) {
       if (generation === liveGeneration) {
         liveConnection = null;
@@ -376,6 +417,8 @@ async function disconnectFromLive() {
   liveGeneration += 1;
   const connection = liveConnection;
   liveConnection = null;
+  giftCatalog = [];
+  giftCatalogError = null;
   liveStatus = { connected: false, connecting: false, username: "", roomId: null, error: null };
   if (connection) await connection.disconnect();
 }
@@ -419,7 +462,8 @@ const server = createServer(async (request, response) => {
         live: liveStatus,
         commentsCount: comments.length,
         giftConfig,
-        recentGifts,
+        giftCatalog,
+        giftCatalogError,
       });
       return;
     }
@@ -455,7 +499,7 @@ const server = createServer(async (request, response) => {
       return;
     }
     if (request.method === "GET" && url.pathname === "/api/gifts") {
-      sendJson(response, 200, { config: giftConfig, recent: recentGifts });
+      sendJson(response, 200, { config: giftConfig, catalog: giftCatalog, catalogError: giftCatalogError });
       return;
     }
     if (request.method === "PUT" && url.pathname === "/api/gifts") {
